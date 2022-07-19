@@ -1,2 +1,2 @@
-# splunk_dashboards
+# Splunk Dashboards
 ![Alt text](sad.jpg?raw=true "Title")
