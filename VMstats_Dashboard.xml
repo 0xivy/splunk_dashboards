@@ -1,0 +1,156 @@
+<form version="1.1" theme="dark">
+  <label>Virtual Machine Real-Time Metrics</label>
+  <description>Access to all of VM's metrics without the need to login everytime.</description>
+  <fieldset submitButton="true">
+    <input type="text" token="pkgs">
+      <label>Packages</label>
+      <default>*</default>
+      <suffix>*</suffix>
+    </input>
+    <input type="text" token="pss">
+      <label>Processes</label>
+      <default>*</default>
+    </input>
+    <input type="dropdown" token="rowtok" searchWhenChanged="false">
+      <label>Choose Panels</label>
+      <choice value="*">All</choice>
+      <choice value="ps">ps</choice>
+      <choice value="pkg">pkg</choice>
+      <choice value="disk">disk</choice>
+      <default>*</default>
+      <initialValue>*</initialValue>
+      <change>
+        <condition label="All">
+          <set token="ps">true</set>
+          <set token="pkg">true</set>
+          <set token="disk">true</set>
+        </condition>
+        <condition label="ps">
+          <set token="ps">true</set>
+          <unset token="pkg"></unset>
+          <unset token="disk"></unset>
+        </condition>
+        <condition label="pkg">
+          <unset token="ps"></unset>
+          <set token="pkg">true</set>
+          <unset token="disk"></unset>
+        </condition>
+        <condition label="disk">
+          <unset token="ps"></unset>
+          <unset token="pkg"></unset>
+          <set token="disk">true</set>
+        </condition>
+      </change>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <single>
+        <title>Commands ran with Superuser Privileges</title>
+        <search>
+          <query>index=loggs sudo NOT sudo:session user=* earliest=1 latest=now() | stats count</query>
+        </search>
+        <option name="drilldown">all</option>
+        <option name="field">count</option>
+        <option name="rangeColors">["0x53a051","0x0877a6","0xf573f5","0xf1813f","0xdc4e41"]</option>
+        <option name="underLabel">till current time</option>
+        <option name="unit">commands</option>
+        <option name="unitPosition">after</option>
+        <option name="useColors">1</option>
+        <drilldown>
+          <link>/app/search/search?q=index=loggs sudo NOT sudo:session user=* earliest=1 latest=now() | stats count</link>
+        </drilldown>
+      </single>
+    </panel>
+    <panel>
+      <single>
+        <title>Total Packages installed ( dpkg --list | wc --lines)</title>
+        <search>
+          <query>index=* source=package earliest=1 latest=now() | dedup NAME | stats count as Total</query>
+        </search>
+        <option name="drilldown">all</option>
+        <option name="field">count</option>
+        <option name="rangeColors">["0x53a051","0x0877a6","0xf8be34","0xf1813f","0x118832"]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="underLabel">till current time</option>
+        <option name="unit">packages</option>
+        <option name="unitPosition">after</option>
+        <option name="useColors">1</option>
+        <drilldown>
+          <link>/app/search/search?q=index=* source=package earliest=1 latest=now() | stats count</link>
+        </drilldown>
+      </single>
+    </panel>
+    <panel>
+      <single>
+        <title>Total Processes running (ps aux)</title>
+        <search>
+          <query>index=*  source=ps earliest=1 latest=now() | dedup process_name | stats count as Total</query>
+        </search>
+        <option name="drilldown">all</option>
+        <option name="field">count</option>
+        <option name="rangeColors">["0x53a051","0x0877a6","0xf8be34","0xf1813f","0xb5fa46"]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="underLabel">till current time</option>
+        <option name="unit">processes</option>
+        <option name="unitPosition">after</option>
+        <option name="useColors">1</option>
+        <option name="showSparkline">0</option>
+        <drilldown>
+          <link>/app/search/search?q=index=*  source=ps | dedup process_name earliest=1 latest=now() | stats count as Total</link>
+        </drilldown>
+      </single>
+    </panel>
+  </row>
+  <row>
+    <panel depends="$pkg$">
+      <table>
+        <title>Packages Installed (dpkg --list)</title>
+        <search>
+          <query>index=* source=package earliest=1 latest=now() NAME=$pkgs$ | dedup NAME | table NAME</query>
+        </search>
+        <option name="count">12</option>
+        <option name="drilldown">none</option>
+        <format type="color" field="NAME">
+          <colorPalette type="minMidMax" maxColor="#f573f5" minColor="#FFFFFF"></colorPalette>
+          <scale type="category"></scale>
+        </format>
+      </table>
+    </panel>
+    <panel depends="$ps$">
+      <table>
+        <title>Running Processes (ps aux)</title>
+        <search>
+          <query>index=*  source=ps process_name=$pss$ earliest=1 latest=now() | dedup process_name | table process_name</query>
+        </search>
+        <option name="count">12</option>
+        <option name="drilldown">none</option>
+        <format type="color" field="process_name">
+          <colorPalette type="minMidMax" maxColor="#31A35F" minColor="#FFFFFF"></colorPalette>
+          <scale type="category"></scale>
+        </format>
+      </table>
+    </panel>
+    <panel depends="$disk$">
+      <table>
+        <title>Disk status in VM (df -h)</title>
+        <search>
+          <query>index=* source="df" earliest=1 latest=now() | dedup mount, Size, filesystem | table mount, Size, filesystem</query>
+        </search>
+        <option name="count">12</option>
+        <format type="color" field="mount">
+          <colorPalette type="minMidMax" maxColor="#b5fa46" minColor="#FFFFFF"></colorPalette>
+          <scale type="category"></scale>
+        </format>
+        <format type="color" field="Size">
+          <colorPalette type="minMidMax" maxColor="#b5fa46" minColor="#FFFFFF"></colorPalette>
+          <scale type="category"></scale>
+        </format>
+        <format type="color" field="filesystem">
+          <colorPalette type="minMidMax" maxColor="#b5fa46" minColor="#FFFFFF"></colorPalette>
+          <scale type="category"></scale>
+        </format>
+      </table>
+    </panel>
+  </row>
+</form>
